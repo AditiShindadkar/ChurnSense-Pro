@@ -66,8 +66,11 @@ The system helps identify:
 git clone https://github.com/AditiShindadkar/ChurnSensePro.git
 cd ChurnSensePro
 
+
 2️⃣ Install Dependencies
 pip install pandas numpy matplotlib seaborn scikit-learn xgboost imbalanced-learn
+
+
 ▶️ Usage
 📓 Run Notebook
 jupyter notebook
