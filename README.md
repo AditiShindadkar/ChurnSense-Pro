@@ -79,7 +79,7 @@ jupyter notebook
 Open:
 Customer Churn Code.ipynb
 
-🖥️ Workflow:-
+🖥️ Workflow
 📂 Data Loading
 Import dataset and explore structure
 
