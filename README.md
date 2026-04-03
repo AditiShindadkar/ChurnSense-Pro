@@ -16,7 +16,7 @@
 
 Predicting churn is important — but **understanding and acting on it is what drives real business value.**
 
-**CustomerChurnNet** uses multiple machine learning models to generate a **churn prediction score** for each customer.  
+**CHurnSensePro** uses multiple machine learning models to generate a **churn prediction score** for each customer.  
 The system helps identify:
 - High-risk customers  
 - Key churn drivers  
