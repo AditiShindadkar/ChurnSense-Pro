@@ -1,4 +1,4 @@
-# 🚀 <span style="color:#00C4FF; font-size:40px;">CustomerChurnNet</span>  
+# 🚀 <span style="color:#00C4FF; font-size:40px;">ChurnSensePro</span>  
 ### 📉 Intelligent Customer Churn Prediction & Retention System  
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python)
