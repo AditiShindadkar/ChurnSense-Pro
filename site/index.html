@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChurnSense Pro</title>
+  <meta name="description" content="Customer churn prediction and profit-driven retention planning. LightGBM with exact SHAP explanations, running entirely in your browser.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M7 21l6-6 4 4 8-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#overview">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M7 21l6-6 4 4 8-9"/></svg>
+        </span>
+        ChurnSense <span class="brand-pro">Pro</span>
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        <a href="#overview">Overview</a>
+        <a href="#explore">Explore</a>
+        <a href="#models">Models</a>
+        <a href="#predict">Predict</a>
+        <a href="#planner">Retention planner</a>
+        <a href="#segments">Segments</a>
+        <a href="#batch">Batch scoring</a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="app">
+    <div class="loading" id="loading">Loading model…</div>
+
+    <!-- OVERVIEW -->
+    <section class="page" id="page-overview" hidden>
+      <div class="hero">
+        <p class="eyebrow">Customer churn · retention economics</p>
+        <h1>Know who will leave, why, and what it’s worth to keep them.</h1>
+        <p class="lead">ChurnSense Pro scores customers with a LightGBM model, explains every prediction with exact SHAP values,
+          and turns risk into a budgeted retention plan. Everything runs in your browser, so no customer data is uploaded.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#predict">Score a customer</a>
+          <a class="btn" href="#planner">Plan a campaign</a>
+        </div>
+      </div>
+      <div class="kpis" id="overview-kpis"></div>
+
+      <div class="card callout">
+        <h2>Before trusting 99.9% accuracy, read this</h2>
+        <p>This public dataset is <strong>synthetic</strong>. Its churn labels were generated from hard cut-offs, and
+          five plain rules with no machine learning already get <strong id="rule-acc"></strong> accuracy. Every customer the
+          rules flag churned. So the useful question is not “is the model accurate?” but
+          <em>“what does ML add over the rules?”</em> Here, it catches the remaining churners that depend on combinations
+          of features, which cuts errors from <strong id="rule-err"></strong> to <strong id="model-err"></strong>.</p>
+        <div class="table-wrap"><table class="table" id="rules-table"></table></div>
+        <p class="muted small">On real customer data, expect AUC in the 0.75–0.90 range. The planner and explanations work the same way.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>What drives churn</h2>
+          <p class="muted">Average impact on the model’s output (mean |SHAP|, log-odds).</p>
+          <div class="chart-box"><canvas id="overview-shap"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>How it works</h2>
+          <ol class="steps">
+            <li><strong>Train</strong>: Python compares a rule baseline, Logistic Regression, Random Forest, XGBoost and LightGBM on 440k customers.</li>
+            <li><strong>Export</strong>: the LightGBM trees are written to a 300 KB JSON file.</li>
+            <li><strong>Score in the browser</strong>: JavaScript runs the trees and computes exact TreeSHAP, tested to match Python to 1e-6.</li>
+            <li><strong>Decide</strong>: expected value = churn risk × offer success × customer value − cost, under your budget.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPLORE -->
+    <section class="page" id="page-explore" hidden>
+      <div class="page-head">
+        <h1>Explore the data</h1>
+        <p class="lead">Observed churn rate across each feature, and how the model’s risk responds when only that feature changes.</p>
+      </div>
+      <div class="card">
+        <div class="field-row">
+          <label class="field">
+            <span>Feature</span>
+            <select id="explore-feature"></select>
+          </label>
+        </div>
+        <div class="grid-2">
+          <div>
+            <h3>Observed churn rate</h3>
+            <div class="chart-box"><canvas id="explore-eda"></canvas></div>
+          </div>
+          <div>
+            <h3>Model response (partial dependence)</h3>
+            <div class="chart-box"><canvas id="explore-pdp"></canvas></div>
+          </div>
+        </div>
+        <p class="muted small" id="explore-note"></p>
+      </div>
+    </section>
+
+    <!-- MODELS -->
+    <section class="page" id="page-models" hidden>
+      <div class="page-head">
+        <h1>Model comparison</h1>
+        <p class="lead" id="models-lead"></p>
+      </div>
+      <div class="card">
+        <div class="table-wrap"><table class="table" id="models-table"></table></div>
+        <p class="muted small" id="cv-note"></p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h2>ROC curves</h2>
+          <div class="chart-box"><canvas id="models-roc"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>Confusion matrix · <span id="cm-title">LightGBM</span></h2>
+          <div class="cm" id="models-cm"></div>
+          <label class="field compact"><span>Model</span><select id="cm-model"></select></label>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h2>Do we need SMOTE?</h2>
+          <p id="smote-text"></p>
+          <div class="table-wrap"><table class="table" id="smote-table"></table></div>
+        </div>
+        <div class="card">
+          <h2>Does feature engineering help?</h2>
+          <p>Four behavioural features from the original notebook (spend per tenure, engagement score, high-support flag,
+            payment risk), tested on two model families.</p>
+          <div class="table-wrap"><table class="table" id="ablation-table"></table></div>
+          <p class="muted small" id="ablation-note"></p>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Calibration</h2>
+        <p class="muted">When the model says 70%, do about 70% churn? This matters because the retention planner multiplies by these probabilities.</p>
+        <div class="chart-box"><canvas id="models-calibration"></canvas></div>
+        <p class="muted small" id="calibration-note"></p>
+      </div>
+    </section>
+
+    <!-- PREDICT -->
+    <section class="page" id="page-predict" hidden>
+      <div class="page-head">
+        <h1>Score a customer</h1>
+        <p class="lead">Change any field and the risk, explanation and recommended action update instantly.</p>
+      </div>
+      <div class="predict-layout">
+        <form class="card" id="predict-form" autocomplete="off">
+          <div class="form-head">
+            <h2>Customer</h2>
+            <div class="preset-row">
+              <button type="button" class="chip" data-preset="safe">Loyal</button>
+              <button type="button" class="chip" data-preset="borderline">Borderline</button>
+              <button type="button" class="chip" data-preset="risky">At risk</button>
+              <button type="button" class="chip" data-preset="random">Random real customer</button>
+            </div>
+          </div>
+          <div class="form-grid" id="predict-fields"></div>
+        </form>
+        <div class="predict-results">
+          <div class="card risk-card" id="risk-card">
+            <div class="risk-label">Churn risk</div>
+            <div class="risk-value" id="risk-value">–</div>
+            <div class="meter"><div class="meter-fill" id="risk-meter"></div></div>
+            <div class="risk-band" id="risk-band"></div>
+            <div class="risk-offer" id="risk-offer"></div>
+          </div>
+          <div class="card">
+            <h2>Why this score</h2>
+            <p class="muted small">Exact SHAP contributions. Red pushes towards churn, green towards staying.</p>
+            <div id="shap-bars" class="shap-bars"></div>
+          </div>
+          <div class="card">
+            <h2>What would lower the risk?</h2>
+            <p class="muted small">Re-scores the customer with one realistic change at a time.</p>
+            <div id="whatif"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLANNER -->
+    <section class="page" id="page-planner" hidden>
+      <div class="page-head">
+        <h1>Retention planner</h1>
+        <p class="lead">Set your economics. The planner picks, for each customer, the offer with the highest expected value,
+          then funds the best ones first until the budget runs out. Results use <span id="planner-n"></span> held-out
+          customers, scaled to your customer base.</p>
+      </div>
+      <div class="planner-layout">
+        <aside class="card planner-controls">
+          <h2>Assumptions</h2>
+          <label class="field"><span>Customer base size</span><input type="number" id="p-base" min="1000" step="1000" value="100000"></label>
+          <div class="field">
+            <span>Customer value</span>
+            <div class="segmented" role="radiogroup">
+              <label><input type="radio" name="p-valuemode" value="spend" checked> From spend</label>
+              <label><input type="radio" name="p-valuemode" value="flat"> Flat CLV</label>
+            </div>
+          </div>
+          <div id="p-spend-fields">
+            <label class="field"><span>Gross margin <output id="o-margin"></output></span><input type="range" id="p-margin" min="0.05" max="0.9" step="0.05" value="0.4"></label>
+            <label class="field"><span>Value horizon <output id="o-horizon"></output></span><input type="range" id="p-horizon" min="0.5" max="5" step="0.5" value="2"></label>
+            <p class="muted small">Value = Total Spend (treated as yearly revenue) × margin × years.</p>
+          </div>
+          <label class="field" id="p-flat-field" hidden><span>Flat lifetime value ($)</span><input type="number" id="p-flat" min="0" step="50" value="500"></label>
+          <label class="field"><span>Contact cost per customer ($)</span><input type="number" id="p-contact" min="0" step="0.5" value="1"></label>
+          <label class="field"><span>Campaign budget ($, blank = unlimited)</span><input type="number" id="p-budget" min="0" step="1000" placeholder="Unlimited"></label>
+
+          <h3>Offers</h3>
+          <div class="offers" id="p-offers"></div>
+          <button type="button" class="btn btn-small" id="p-add-offer">+ Add offer</button>
+        </aside>
+
+        <div class="planner-results">
+          <div class="kpis" id="planner-kpis"></div>
+          <div class="card">
+            <h2>Strategy comparison</h2>
+            <p class="muted small">Expected profit for each way of choosing who to contact.</p>
+            <div class="chart-box"><canvas id="planner-strategies"></canvas></div>
+          </div>
+          <div class="card">
+            <h2>Threshold approach: profit vs cut-off</h2>
+            <p class="muted small">Everyone above the threshold gets <span id="planner-ref-offer"></span>. Smart targeting is shown as the dashed line.</p>
+            <div class="chart-box"><canvas id="planner-curve"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2>Target list</h2>
+              <button type="button" class="btn btn-small" id="planner-download">Download CSV</button>
+            </div>
+            <div class="table-wrap"><table class="table" id="planner-table"></table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEGMENTS -->
+    <section class="page" id="page-segments" hidden>
+      <div class="page-head">
+        <h1>Customer segments</h1>
+        <p class="lead">KMeans on six behavioural features. Each segment is named after its two most distinctive traits, with a playbook to match.</p>
+      </div>
+      <div class="segments" id="segments"></div>
+      <div class="card">
+        <h2>Segment risk vs size</h2>
+        <div class="chart-box"><canvas id="segments-chart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- BATCH -->
+    <section class="page" id="page-batch" hidden>
+      <div class="page-head">
+        <h1>Batch scoring</h1>
+        <p class="lead">Upload a CSV of customers. Each row gets a churn risk, its top driver, a segment and the best offer.
+          The file is processed in your browser and never leaves your device.</p>
+      </div>
+      <div class="card">
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="batch-file" accept=".csv,text/csv">
+          <strong>Choose a CSV</strong> or drop it here
+          <span class="muted small">Required columns: <span id="batch-columns"></span></span>
+        </label>
+        <div class="batch-actions">
+          <button type="button" class="btn btn-small" id="batch-template">Download template</button>
+          <button type="button" class="btn btn-small" id="batch-demo">Try with 200 sample customers</button>
+        </div>
+        <div id="batch-status" class="small" role="status"></div>
+      </div>
+      <div class="card" id="batch-results" hidden>
+        <div class="card-head">
+          <h2>Results</h2>
+          <button type="button" class="btn btn-small btn-primary" id="batch-download">Download scored CSV</button>
+        </div>
+        <div class="kpis compact" id="batch-kpis"></div>
+        <div class="table-wrap"><table class="table" id="batch-table"></table></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>ChurnSense Pro · built by Aditi Shindadkar</span>
+    <a href="https://github.com/AditiShindadkar/ChurnSense-Pro-AI-" target="_blank" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>
