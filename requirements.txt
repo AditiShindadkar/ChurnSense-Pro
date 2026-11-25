@@ -1,8 +1,8 @@
-streamlit
-pandas
-numpy
-matplotlib
-seaborn
-scikit-learn
-xgboost
-imbalanced-learn>=0.11.0
+# Training pipeline only. The website is static and needs no Python at runtime.
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+lightgbm>=4.3
+xgboost>=2.0
+imbalanced-learn>=0.12
+pytest>=8.0
