@@ -6,7 +6,7 @@ ChurnSense Pro trains and compares five approaches on 440,832 customers. It ship
 client-side, with exact SHAP explanations, a profit-driven retention planner and batch CSV scoring.
 No server, no sign-up, and no customer data ever leaves the visitor's device.
 
-**Live demo:** _link added after the first Vercel deploy_
+**Live demo: [churnsense-pro.vercel.app](https://churnsense-pro.vercel.app)**
 
 | Page | What it does |
 |---|---|
@@ -81,7 +81,7 @@ node --test tests_js/            # JS model matches Python predictions and SHAP 
 The site is static, so Vercel serves the `site/` folder with no build step (see [vercel.json](vercel.json)).
 
 ```bash
-npx vercel --prod
+npx vercel deploy --prod
 ```
 
 ## Project structure

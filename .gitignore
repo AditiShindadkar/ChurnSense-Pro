@@ -7,3 +7,5 @@ node_modules/
 .venv/
 *.pkl
 reports/train_log.txt
+.vercel
+.env*
